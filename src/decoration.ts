@@ -92,6 +92,7 @@ export function fromDecoration(medal: Medal, star1: Star, star2: Star, star3: St
   return result;
 }
 
+// Mirrors https://github.com/Warzone2100/warzone2100/blob/40e2637345dd8ec149f3f7eb08465048eed870d0/src/titleui/widgets/lobbyplayerrow.cpp#L371
 export function toDecoration(
   wins: number,
   losses: number,
