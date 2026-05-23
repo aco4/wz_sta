@@ -1,0 +1,45 @@
+{
+  "name": "@aco4/wz-sta",
+  "version": "0.1.0",
+  "description": "TypeScript utilities for reading, writing, and deriving Warzone 2100 .sta2 player stats.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aco4/wz-sta.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aco4/wz-sta/issues"
+  },
+  "homepage": "https://github.com/aco4/wz-sta#readme",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  }
+}
