@@ -9,7 +9,8 @@
     "rootDir": "src",
     "strict": true,
     "target": "ES2023",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
