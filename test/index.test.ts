@@ -23,7 +23,7 @@ import {
 const tempDirs: string[] = [];
 
 async function makeTempDir(): Promise<string> {
-  const dir = join(tmpdir(), `wz-sta-${crypto.randomUUID()}`);
+  const dir = join(tmpdir(), `wz_sta-${crypto.randomUUID()}`);
   tempDirs.push(dir);
   await mkdir(dir, { recursive: true });
   return dir;

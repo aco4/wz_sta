@@ -1,4 +1,4 @@
-# wz-sta
+# wz_sta
 
 TypeScript utilities for Warzone 2100 `.sta2` player stat files.
 
@@ -7,7 +7,7 @@ TypeScript utilities for Warzone 2100 `.sta2` player stat files.
 This package is configured for private GitHub Packages publishing. Before publishing, replace `aco4` in `package.json` and `.npmrc` with the GitHub user or organization that owns the package.
 
 ```sh
-npm install @aco4/wz-sta
+npm install @aco4/wz_sta
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ npm install @aco4/wz-sta
 Use the file helpers to build `.sta2` paths, check for an existing player file, create a new one, read parsed data, and update only the fields you want to change.
 
 ```ts
-import { createStaFile, getStaPath, readStaData, staFileExists, updateStaFile } from "@aco4/wz-sta";
+import { createStaFile, getStaPath, readStaData, staFileExists, updateStaFile } from "@aco4/wz_sta";
 
 const staPath = getStaPath("/path/to/warzone2100/config", "Player");
 
@@ -38,7 +38,7 @@ console.log(data);
 Use the decoration manager to obtain stat values that produce a desired Warzone 2100 decoration output.
 
 ```ts
-import { DecorationManager, updateStaFile } from "@aco4/wz-sta";
+import { DecorationManager, updateStaFile } from "@aco4/wz_sta";
 
 const hackerStats = DecorationManager.getPresetStats("HACKER");
 
@@ -60,7 +60,7 @@ npm run build
 
 ## Publishing To GitHub Packages
 
-1. Replace `@aco4/wz-sta` with your actual GitHub scope in `package.json`.
+1. Replace `@aco4/wz_sta` with your actual GitHub scope in `package.json`.
 2. Replace the scope in `.npmrc`.
 3. Authenticate with a token that can publish packages:
 
