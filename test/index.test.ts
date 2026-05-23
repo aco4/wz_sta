@@ -4,16 +4,20 @@ import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DECORATION,
+  DecorationManager,
   MEDAL,
   STAR,
+  createStaFile,
   fromDecoration,
   fromDecorationObj,
   getStaPath,
   parseStaContent,
+  readStaData,
   stringify,
   stringifyStaData,
+  staFileExists,
   toDecoration,
-  writeStaFile
+  updateStaFile
 } from "../src/index.js";
 
 const tempDirs: string[] = [];
@@ -76,13 +80,33 @@ describe("sta paths and files", () => {
     expect(getStaPath("/wz", "Alice")).toBe(join("/wz", "multiplay/players", "Alice.sta2"));
   });
 
-  it("creates parent directories when writing a new sta file", async () => {
+  it("creates parent directories when updating a missing sta file", async () => {
     const dir = await makeTempDir();
     const staPath = getStaPath(dir, "Alice");
 
-    await writeStaFile(staPath, { wins: 3 });
+    await updateStaFile(staPath, { wins: 3 });
 
     expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n3 0 0 0 0\n");
+  });
+
+  it("checks existence and creates a new sta file", async () => {
+    const dir = await makeTempDir();
+    const staPath = getStaPath(dir, "Alice");
+
+    expect(await staFileExists(staPath)).toBe(false);
+
+    await createStaFile(staPath, { wins: 1, privateKey: "secret" });
+
+    expect(await staFileExists(staPath)).toBe(true);
+    expect(await readStaData(staPath)).toEqual({
+      version: 3,
+      wins: 1,
+      losses: 0,
+      totalKills: 0,
+      totalScore: 0,
+      gamesPlayed: 0,
+      privateKey: "secret"
+    });
   });
 
   it("updates only provided fields on an existing sta file", async () => {
@@ -91,9 +115,20 @@ describe("sta paths and files", () => {
     await mkdir(join(dir, "multiplay/players"), { recursive: true });
     await writeFile(staPath, "WZ.STA.v3\n1 2 3 4 5\nsecret");
 
-    await writeStaFile(staPath, { wins: 9, privateKey: "new-secret" });
+    await updateStaFile(staPath, { wins: 9, privateKey: "new-secret" });
 
     expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n9 2 3 4 5\nnew-secret");
+  });
+
+  it("updates only the private key on an existing sta file", async () => {
+    const dir = await makeTempDir();
+    const staPath = getStaPath(dir, "Alice");
+    await mkdir(join(dir, "multiplay/players"), { recursive: true });
+    await writeFile(staPath, "WZ.STA.v3\n1 2 3 4 5\nold-secret");
+
+    await updateStaFile(staPath, { privateKey: "new-secret" });
+
+    expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n1 2 3 4 5\nnew-secret");
   });
 });
 
@@ -103,6 +138,24 @@ describe("decorations", () => {
       medal: MEDAL.LEVEL3,
       star1: STAR.GOLD,
       star2: STAR.GOLD,
+      star3: STAR.GOLD
+    });
+  });
+
+  it("preserves package decoration enum values", () => {
+    expect(STAR.BRONZE).toBe(1);
+    expect(STAR.SILVER).toBe(2);
+    expect(STAR.GOLD).toBe(3);
+    expect(MEDAL.LEVEL1).toBe(1);
+    expect(MEDAL.LEVEL2).toBe(2);
+    expect(MEDAL.LEVEL3).toBe(3);
+  });
+
+  it("keeps star fields while marking players with fewer than five games as baby", () => {
+    expect(toDecoration(81, 0, 601, 0, 4)).toEqual({
+      medal: MEDAL.BABY,
+      star1: STAR.GOLD,
+      star2: STAR.NONE,
       star3: STAR.GOLD
     });
   });
@@ -121,5 +174,11 @@ describe("decorations", () => {
     const stats = fromDecorationObj(DECORATION.HACKER);
 
     expect(toDecoration(stats.wins, stats.losses, stats.totalKills, stats.totalScore, stats.gamesPlayed)).toEqual(DECORATION.HACKER);
+  });
+
+  it("obtains preset stats through the decoration manager", () => {
+    const stats = DecorationManager.getPresetStats("HACKER");
+
+    expect(DecorationManager.getDecorationForStats(stats)).toEqual(DecorationManager.getPreset("HACKER"));
   });
 });

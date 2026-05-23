@@ -12,27 +12,42 @@ npm install @aco4/wz-sta
 
 ## Usage
 
+### File handling
+
+Use the file helpers to build `.sta2` paths, check for an existing player file, create a new one, read parsed data, and update only the fields you want to change.
+
 ```ts
-import {
-  DECORATION,
-  fromDecorationObj,
-  getStaPath,
-  readStaFile,
-  toDecoration,
-  writeStaFile
-} from "@aco4/wz-sta";
+import { createStaFile, getStaPath, readStaData, staFileExists, updateStaFile } from "@aco4/wz-sta";
 
 const staPath = getStaPath("/path/to/warzone2100/config", "Player");
 
-await writeStaFile(staPath, {
-  ...fromDecorationObj(DECORATION.HACKER),
-  privateKey: "optional-private-key"
+if (!(await staFileExists(staPath))) {
+  await createStaFile(staPath);
+}
+
+await updateStaFile(staPath, {
+  privateKey: "base64-private-key"
 });
 
-const content = await readStaFile(staPath);
-console.log(content);
+const data = await readStaData(staPath);
+console.log(data);
+```
 
-console.log(toDecoration(81, 0, 601, 0, 201));
+### Decoration manager
+
+Use the decoration manager to obtain stat values that produce a desired Warzone 2100 decoration output.
+
+```ts
+import { DecorationManager, updateStaFile } from "@aco4/wz-sta";
+
+const hackerStats = DecorationManager.getPresetStats("HACKER");
+
+await updateStaFile(staPath, {
+  ...hackerStats,
+  privateKey: "base64-private-key"
+});
+
+console.log(DecorationManager.getDecorationForStats(hackerStats));
 ```
 
 ## Development
