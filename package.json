@@ -1,6 +1,6 @@
 {
   "name": "@aco4/wz_sta",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "TypeScript utilities for reading, writing, and deriving Warzone 2100 .sta2 player stats.",
   "type": "module",
   "license": "UNLICENSED",
