@@ -50,10 +50,24 @@ describe("sta content", () => {
     });
   });
 
+  it("parses content with a private key followed by one final line ending", () => {
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\n")).toMatchObject({
+      privateKey: "secret"
+    });
+    expect(parseStaContent("WZ.STA.v3\r\n1 2 3 4 5\r\nsecret\r\n")).toMatchObject({
+      privateKey: "secret"
+    });
+  });
+
   it("parses content without a private key line", () => {
     expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5")).toMatchObject({
       privateKey: ""
     });
+  });
+
+  it("returns null for content with more than one final line ending", () => {
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\n\n")).toBeNull();
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\n\n")).toBeNull();
   });
 
   it("returns null for invalid content", () => {

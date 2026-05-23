@@ -1,7 +1,7 @@
 import type { StaContent, StaData, StaUpdates } from "./types.js";
 
 const STA_PATTERN =
-  /^WZ\.STA\.v(?<version>\d+)\r?\n(?<wins>\d+) (?<losses>\d+) (?<totalKills>\d+) (?<totalScore>\d+) (?<gamesPlayed>\d+)(?:\r?\n(?<privateKey>.*))?$/;
+  /^WZ\.STA\.v(?<version>\d+)\r?\n(?<wins>\d+) (?<losses>\d+) (?<totalKills>\d+) (?<totalScore>\d+) (?<gamesPlayed>\d+)(?:\r?\n(?:(?<privateKey>[^\r\n]+)(?:\r?\n)?)?)?$/;
 
 export function createStaData(updates: StaUpdates = {}): StaData {
   return {
