@@ -19,18 +19,44 @@ Use the file helpers to build `.sta2` paths, check for an existing player file, 
 ```ts
 import { createStaFile, getStaPath, readStaData, staFileExists, updateStaFile } from "@aco4/wz_sta";
 
-const staPath = getStaPath("/path/to/warzone2100/config", "Player");
+const staPathResult = getStaPath("/path/to/warzone2100/config", "Player");
 
-if (!(await staFileExists(staPath))) {
-  await createStaFile(staPath);
+if (staPathResult.error) {
+  console.error(staPathResult.error.message);
+} else {
+  const { staPath } = staPathResult;
+  const existsResult = await staFileExists(staPath);
+
+  if (existsResult.error) {
+    console.error(existsResult.error.message);
+  } else if (!existsResult.exists) {
+    const createResult = await createStaFile(staPath);
+
+    if (createResult.error) {
+      console.error(createResult.error.message);
+    }
+  }
+
+  const updateResult = await updateStaFile(staPath, {
+    privateKey: "base64-private-key"
+  });
+
+  if (updateResult.error) {
+    console.error(updateResult.error.message);
+  } else {
+    console.log(updateResult);
+  }
+
+  const dataResult = await readStaData(staPath);
+
+  if (dataResult.error) {
+    console.error(dataResult.error.message);
+  } else if (dataResult.data === null) {
+    console.log("No sta file found");
+  } else {
+    console.log(dataResult);
+  }
 }
-
-await updateStaFile(staPath, {
-  privateKey: "base64-private-key"
-});
-
-const data = await readStaData(staPath);
-console.log(data);
 ```
 
 ### Decoration manager
@@ -42,10 +68,14 @@ import { DecorationManager, updateStaFile } from "@aco4/wz_sta";
 
 const hackerStats = DecorationManager.getPresetStats("HACKER");
 
-await updateStaFile(staPath, {
+const updateResult = await updateStaFile(staPath, {
   ...hackerStats,
   privateKey: "base64-private-key"
 });
+
+if (updateResult.error) {
+  console.error(updateResult.error.message);
+}
 
 console.log(DecorationManager.getDecorationForStats(hackerStats));
 ```

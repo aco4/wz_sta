@@ -13,6 +13,7 @@ import {
   getStaPath,
   parseStaContent,
   readStaData,
+  readStaFile,
   stringify,
   stringifyStaData,
   staFileExists,
@@ -27,6 +28,16 @@ async function makeTempDir(): Promise<string> {
   tempDirs.push(dir);
   await mkdir(dir, { recursive: true });
   return dir;
+}
+
+function expectStaPath(result: ReturnType<typeof getStaPath>): string {
+  expect(result.error).toBeUndefined();
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  return result.staPath;
 }
 
 afterEach(async () => {
@@ -59,19 +70,49 @@ describe("sta content", () => {
     });
   });
 
+  it("parses content with trailing null terminators", () => {
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\n\0")).toMatchObject({
+      privateKey: "secret"
+    });
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\0")).toMatchObject({
+      privateKey: "secret"
+    });
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\0")).toMatchObject({
+      privateKey: ""
+    });
+  });
+
+  it("parses content with loose framing whitespace", () => {
+    expect(parseStaContent("\uFEFF WZ.STA.v3 \r\n 1\t2  3   4\t 5 \r\n secret \r\n\r\n\0\0")).toEqual({
+      version: 3,
+      wins: 1,
+      losses: 2,
+      totalKills: 3,
+      totalScore: 4,
+      gamesPlayed: 5,
+      privateKey: "secret"
+    });
+  });
+
   it("parses content without a private key line", () => {
     expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5")).toMatchObject({
       privateKey: ""
     });
   });
 
-  it("returns null for content with more than one final line ending", () => {
-    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\n\n")).toBeNull();
-    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\n\n")).toBeNull();
+  it("ignores extra blank lines around the optional private key", () => {
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\n\n")).toMatchObject({
+      privateKey: "secret"
+    });
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\n\n")).toMatchObject({
+      privateKey: ""
+    });
   });
 
   it("returns null for invalid content", () => {
     expect(parseStaContent("not sta")).toBeNull();
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4\nsecret")).toBeNull();
+    expect(parseStaContent("WZ.STA.v3\n1 2 3 4 5\nsecret\nextra")).toBeNull();
   });
 
   it("stringifies parsed data", () => {
@@ -91,27 +132,43 @@ describe("sta content", () => {
 
 describe("sta paths and files", () => {
   it("builds the sta2 path under the Warzone 2100 players directory", () => {
-    expect(getStaPath("/wz", "Alice")).toBe(join("/wz", "multiplay/players", "Alice.sta2"));
+    expect(getStaPath("/wz", "Alice")).toEqual({ staPath: join("/wz", "multiplay/players", "Alice.sta2") });
+  });
+
+  it("returns an error result for invalid path inputs", () => {
+    const result = getStaPath(null as unknown as string, "Alice");
+
+    expect(result.error).toBeInstanceOf(Error);
+  });
+
+  it("returns content null for a missing sta file", async () => {
+    const dir = await makeTempDir();
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
+
+    expect(await readStaFile(staPath)).toEqual({ content: null });
+    expect(await readStaData(staPath)).toEqual({ data: null });
   });
 
   it("creates parent directories when updating a missing sta file", async () => {
     const dir = await makeTempDir();
-    const staPath = getStaPath(dir, "Alice");
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
 
-    await updateStaFile(staPath, { wins: 3 });
+    const result = await updateStaFile(staPath, { wins: 3 });
 
+    expect(result.error).toBeUndefined();
     expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n3 0 0 0 0\n");
   });
 
   it("checks existence and creates a new sta file", async () => {
     const dir = await makeTempDir();
-    const staPath = getStaPath(dir, "Alice");
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
 
-    expect(await staFileExists(staPath)).toBe(false);
+    expect(await staFileExists(staPath)).toEqual({ exists: false });
 
-    await createStaFile(staPath, { wins: 1, privateKey: "secret" });
+    const createResult = await createStaFile(staPath, { wins: 1, privateKey: "secret" });
 
-    expect(await staFileExists(staPath)).toBe(true);
+    expect(createResult.error).toBeUndefined();
+    expect(await staFileExists(staPath)).toEqual({ exists: true });
     expect(await readStaData(staPath)).toEqual({
       version: 3,
       wins: 1,
@@ -125,24 +182,52 @@ describe("sta paths and files", () => {
 
   it("updates only provided fields on an existing sta file", async () => {
     const dir = await makeTempDir();
-    const staPath = getStaPath(dir, "Alice");
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
     await mkdir(join(dir, "multiplay/players"), { recursive: true });
     await writeFile(staPath, "WZ.STA.v3\n1 2 3 4 5\nsecret");
 
-    await updateStaFile(staPath, { wins: 9, privateKey: "new-secret" });
+    const result = await updateStaFile(staPath, { wins: 9, privateKey: "new-secret" });
 
+    expect(result.error).toBeUndefined();
     expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n9 2 3 4 5\nnew-secret");
   });
 
   it("updates only the private key on an existing sta file", async () => {
     const dir = await makeTempDir();
-    const staPath = getStaPath(dir, "Alice");
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
     await mkdir(join(dir, "multiplay/players"), { recursive: true });
     await writeFile(staPath, "WZ.STA.v3\n1 2 3 4 5\nold-secret");
 
-    await updateStaFile(staPath, { privateKey: "new-secret" });
+    const result = await updateStaFile(staPath, { privateKey: "new-secret" });
 
+    expect(result.error).toBeUndefined();
     expect(await readFile(staPath, "utf8")).toBe("WZ.STA.v3\n1 2 3 4 5\nnew-secret");
+  });
+
+  it("includes non-secret content details when an existing sta file is unparsable", async () => {
+    const dir = await makeTempDir();
+    const staPath = expectStaPath(getStaPath(dir, "Alice"));
+    await mkdir(join(dir, "multiplay/players"), { recursive: true });
+    await writeFile(staPath, "WZ.STA.v3\n1 2\nsecret");
+
+    const readResult = await readStaData(staPath);
+    const result = await updateStaFile(staPath, { wins: 9 });
+
+    expect(readResult.error?.message).toMatch(
+      /Unable to parse sta file: .*details=\{"byteLength":20,"lineCount":3,.*"secondLine":"1 2",.*"privateKeyLineLength":6/
+    );
+    expect(result.error?.message).toMatch(
+      /Unable to parse sta file: .*details=\{"byteLength":20,"lineCount":3,.*"secondLine":"1 2",.*"privateKeyLineLength":6/
+    );
+  });
+
+  it("returns error results for filesystem failures", async () => {
+    const invalidPath = "\0bad";
+
+    expect((await staFileExists(invalidPath)).error).toBeInstanceOf(Error);
+    expect((await readStaFile(invalidPath)).error).toBeInstanceOf(Error);
+    expect((await createStaFile(invalidPath)).error).toBeInstanceOf(Error);
+    expect((await updateStaFile(invalidPath, { wins: 1 })).error).toBeInstanceOf(Error);
   });
 });
 

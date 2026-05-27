@@ -1,7 +1,7 @@
 import type { StaContent, StaData, StaUpdates } from "./types.js";
 
-const STA_PATTERN =
-  /^WZ\.STA\.v(?<version>\d+)\r?\n(?<wins>\d+) (?<losses>\d+) (?<totalKills>\d+) (?<totalScore>\d+) (?<gamesPlayed>\d+)(?:\r?\n(?:(?<privateKey>[^\r\n]+)(?:\r?\n)?)?)?$/;
+const STA_HEADER_PATTERN = /^WZ\.STA\.v(?<version>\d+)$/;
+const INTEGER_PATTERN = /^\d+$/;
 
 export function createStaData(updates: StaUpdates = {}): StaData {
   return {
@@ -52,19 +52,25 @@ export function stringifyStaData(staData: StaData): StaContent {
 }
 
 export function parseStaContent(staContent: StaContent): StaData | null {
-  const match = STA_PATTERN.exec(staContent);
+  const normalizedStaContent = staContent.replace(/^\uFEFF/, "").replace(/[\s\0]+$/u, "");
+  const lines = normalizedStaContent.split(/\r\n|\n|\r/);
+  const headerMatch = STA_HEADER_PATTERN.exec(lines[0]?.trim() ?? "");
+  const stats = lines[1]?.trim().split(/\s+/) ?? [];
+  const privateKeyLines = lines.slice(2).map((line) => line.trim()).filter((line) => line !== "");
 
-  if (!match?.groups) {
+  if (!headerMatch?.groups || stats.length !== 5 || !stats.every((value) => INTEGER_PATTERN.test(value)) || privateKeyLines.length > 1) {
     return null;
   }
 
+  const [wins, losses, totalKills, totalScore, gamesPlayed] = stats;
+
   return {
-    version: Number.parseInt(match.groups.version, 10),
-    wins: Number.parseInt(match.groups.wins, 10),
-    losses: Number.parseInt(match.groups.losses, 10),
-    totalKills: Number.parseInt(match.groups.totalKills, 10),
-    totalScore: Number.parseInt(match.groups.totalScore, 10),
-    gamesPlayed: Number.parseInt(match.groups.gamesPlayed, 10),
-    privateKey: match.groups.privateKey ?? ""
+    version: Number.parseInt(headerMatch.groups.version, 10),
+    wins: Number.parseInt(wins, 10),
+    losses: Number.parseInt(losses, 10),
+    totalKills: Number.parseInt(totalKills, 10),
+    totalScore: Number.parseInt(totalScore, 10),
+    gamesPlayed: Number.parseInt(gamesPlayed, 10),
+    privateKey: privateKeyLines[0] ?? ""
   };
 }

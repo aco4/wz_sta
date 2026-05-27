@@ -14,6 +14,16 @@ export interface StaData extends StaStats {
 export type StaContent = string;
 export type StaPath = string;
 
+export interface StaErrorResult {
+  error: Error;
+}
+
+export type StaPathResult = { staPath: StaPath; error?: never } | StaErrorResult;
+export type StaFileExistsResult = { exists: boolean; error?: never } | StaErrorResult;
+export type StaFileContentResult = { content: StaContent | null; error?: never } | StaErrorResult;
+export type StaDataResult = (StaData & { data?: never; error?: never }) | StaErrorResult;
+export type ReadStaDataResult = StaDataResult | { data: null; error?: never };
+
 export interface StaUpdates {
   version?: number;
   wins?: number;
@@ -23,6 +33,8 @@ export interface StaUpdates {
   gamesPlayed?: number;
   privateKey?: string;
 }
+
+export type UpdateStaFileResult = StaDataResult;
 
 export interface Decoration {
   medal: Medal;
